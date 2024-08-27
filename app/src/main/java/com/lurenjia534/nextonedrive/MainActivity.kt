@@ -28,12 +28,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,6 +62,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 
 
 class MainActivity : ComponentActivity() {
@@ -193,88 +200,143 @@ fun InboxScreen() {
     var userId by remember { mutableStateOf("") }
     var grantType by remember { mutableStateOf("client_credentials") }
     var scope by remember { mutableStateOf("https://graph.microsoft.com/.default offline_access") }
-
+    // ErrorSnackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showErrorSnackbar by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    // onSurface Snackbar Status
+    var showSuccessSnackbar by remember { mutableStateOf(false) }
+    var successMessage by remember { mutableStateOf("") }
     // Main layout
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Title
-        Text(
-            text = "Next OneDrive LOGIN",
-            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
-        // Tenant ID TextField
-        OutlinedTextField(
-            value = tenantId,
-            onValueChange = { tenantId = it },
-            label = { Text("Tenant ID") },
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor =  if (showSuccessSnackbar) Color.Black else Color.Black,  // 判断是否为成功 Snackbar 来设置背景颜色
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+            }
+        }
+    ) {paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
-        // Client ID TextField
-        OutlinedTextField(
-            value = clientId,
-            onValueChange = { clientId = it },
-            label = { Text("Client ID") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
-        // Client Secret TextField
-        OutlinedTextField(
-            value = clientSecret,
-            onValueChange = { clientSecret = it },
-            label = { Text("Client Secret") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
-        // User ID TextField
-        OutlinedTextField(
-            value = userId,
-            onValueChange = { userId = it },
-            label = { Text("User ID") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
-        // Grant Type TextField
-        OutlinedTextField(
-            value = grantType,
-            onValueChange = { grantType = it },
-            label = { Text("Grant Type") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-        )
-        // Scope TextField
-        OutlinedTextField(
-            value = scope,
-            onValueChange = { scope = it },
-            label = { Text("Scope") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-        )
-        // Login Button
-        Button(
-            onClick = {
-                // 这里你可以保存输入内容，或者将它们用于后续的 OAuth2 请求
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
+                .fillMaxSize()
+                .padding(16.dp)
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Login", color = Color.White)
+            // Title
+            Text(
+                text = "Next OneDrive LOGIN",
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+            // Tenant ID TextField
+            OutlinedTextField(
+                value = tenantId,
+                onValueChange = { tenantId = it },
+                label = { Text("Tenant ID") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+            // Client ID TextField
+            OutlinedTextField(
+                value = clientId,
+                onValueChange = { clientId = it },
+                label = { Text("Client ID") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+            // Client Secret TextField
+            OutlinedTextField(
+                value = clientSecret,
+                onValueChange = { clientSecret = it },
+                label = { Text("Client Secret") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+            // User ID TextField
+            OutlinedTextField(
+                value = userId,
+                onValueChange = { userId = it },
+                label = { Text("User ID") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+            // Grant Type TextField
+            OutlinedTextField(
+                value = grantType,
+                onValueChange = { grantType = it },
+                label = { Text("Grant Type") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            )
+            // Scope TextField
+            OutlinedTextField(
+                value = scope,
+                onValueChange = { scope = it },
+                label = { Text("Scope") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            )
+            val context = LocalContext.current
+            // Login Button
+            OutlinedButton(
+                onClick = {
+                    // 这里你可以保存输入内容，或者将它们用于后续的 OAuth2 请求
+                    fetchAccessToken(
+                        context = context,
+                        tenantId = tenantId,
+                        clientId = clientId,
+                        clientSecret = clientSecret,
+                        grantType = grantType,
+                        scope = scope,
+                        userId = userId,
+                        onError = { message ->
+                            errorMessage = message
+                            showErrorSnackbar = true // 重置状态
+                        },
+                        onSuccess = { token ->
+                            // 成功后的操作
+                            successMessage = "Token: $token"
+                            println("Token $token")
+                            showSuccessSnackbar = true // 重置状态
+                        }
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Login", color = Color.White)
+            }
+        }
+        // Show error snackbar
+        if (showErrorSnackbar) {
+            LaunchedEffect(snackbarHostState) {
+                snackbarHostState.showSnackbar(errorMessage)
+                showErrorSnackbar = false // 重置状态
+            }
+        }
+        // Show success snackbar
+        if (showSuccessSnackbar){
+            LaunchedEffect(snackbarHostState){
+                snackbarHostState.showSnackbar(successMessage)
+                showSuccessSnackbar = false // 重置状态
+                print("Token: $successMessage")
+            }
         }
     }
 }
