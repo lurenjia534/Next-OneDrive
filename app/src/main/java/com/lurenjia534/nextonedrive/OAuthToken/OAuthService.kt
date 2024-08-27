@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.work.ListenableWorker.Result.Success
+import com.lurenjia534.nextonedrive.TokenRefresh.scheduleTokenRefresh
 import retrofit2.Call
 import retrofit2.Response
 
@@ -32,10 +33,10 @@ fun fetchAccessToken(
     call.enqueue(object : retrofit2.Callback<OAuthTokenResponse> {
         override fun onResponse(
             call: Call<OAuthTokenResponse>,
-            resopnse: Response<OAuthTokenResponse>,
+            response: Response<OAuthTokenResponse>,
         ){
-            if (resopnse.isSuccessful){
-                val tokenResponse = resopnse.body()
+            if (response.isSuccessful){
+                val tokenResponse = response.body()
                 tokenResponse?.let {
                     saveCredentials(
                         context = context,
@@ -48,11 +49,13 @@ fun fetchAccessToken(
                         token = it.access_token,
                     )
                     onSuccess(it.access_token)
+                    // 在成功获取token后，调用scheduleTokenRefresh函数，以确保在token过期之前刷新
+                    scheduleTokenRefresh(context = context)
                 }
             }else {
                 // 处理错误
-                val response = resopnse
-                val errorBody = resopnse.errorBody()?.string()
+                val response = response
+                val errorBody = response.errorBody()?.string()
                 println("Raw Error Body: $errorBody")  // 打印原始错误体
                 if (!errorBody.isNullOrEmpty()){
                     onError("Error: $errorBody")
