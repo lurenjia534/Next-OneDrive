@@ -114,7 +114,7 @@ class MainActivity : ComponentActivity() {
 fun MyNavigationDrawer(
     innerPadding: PaddingValues = PaddingValues(0.dp)
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed )
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
@@ -123,56 +123,68 @@ fun MyNavigationDrawer(
     val selectedItem = remember { mutableStateOf(items[0]) }
     ModalNavigationDrawer(
         drawerState = drawerState,
-         drawerContent = {
-             ModalDrawerSheet {
-                 Text(
-                     text = "Next OneDrive",
-                     modifier = Modifier.padding(16.dp),
-                     style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp
-                        )
-                 )
-                 // Loop through items to create the NavigationDrawerItem for each
-                 items.forEach{ item ->
-                     NavigationDrawerItem(
-                         label = { Text(item.capitalize(Locale.ROOT)) },
-                         selected = item == selectedItem.value,
-                         onClick = {
-                             scope.launch {
-                                 drawerState.close()
-                             }
-                                selectedItem.value = item
-                                navController.navigate(item){
-                                    popUpTo(navController.graph.startDestinationId){
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    text = "Next OneDrive",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    )
+                )
+                // Loop through items to create the NavigationDrawerItem for each
+                items.forEach { item ->
+                    NavigationDrawerItem(
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            top = 8.dp,
+                            end = 16.dp,
+                            bottom = 8.dp
+                        ),
+                        label = {
+                            Text(item.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(
+                                    Locale.ROOT
+                                ) else it.toString()
+                            })
+                        },
+                        selected = item == selectedItem.value,
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                            }
+                            selectedItem.value = item
+                            navController.navigate(item) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
                                 }
-                         },
-                         icon = {
-                             Icon(
-                                 imageVector = when(item){
-                                        "inbox" -> Icons.Outlined.Home
-                                        "outbox" -> Icons.AutoMirrored.Outlined.Send
-                                        "favorites" -> Icons.Outlined.FavoriteBorder
-                                        "trash" -> Icons.Outlined.Delete
-                                        else -> Icons.Outlined.ArrowDropDown
-                                    },
-                                 contentDescription = null
-                             )
-                         }
-                     )
-                 }
-             }
-         },
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = when (item) {
+                                    "inbox" -> Icons.Outlined.Home
+                                    "outbox" -> Icons.AutoMirrored.Outlined.Send
+                                    "favorites" -> Icons.Outlined.FavoriteBorder
+                                    "trash" -> Icons.Outlined.Delete
+                                    else -> Icons.Outlined.ArrowDropDown
+                                },
+                                contentDescription = null
+                            )
+                        }
+                    )
+                }
+            }
+        },
         content = {
             NavHost(
                 navController = navController,
                 startDestination = "inbox"
-            ){
-                composable("inbox") { InboxScreen(navController)  }
+            ) {
+                composable("inbox") { InboxScreen(navController) }
                 composable("outbox") { OutboxScreen() }
                 composable("favorites") { FavoritesScreen() }
                 composable("trash") { TrashScreen() }
@@ -389,7 +401,7 @@ fun OutboxScreen() {
             SnackbarHost(hostState = snackbarHostState)
         },
         content = { paddingValues ->
-            if (driveInfo != null){
+            if (driveInfo != null) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
