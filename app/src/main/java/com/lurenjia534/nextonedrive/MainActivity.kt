@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -91,6 +92,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
+import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
@@ -112,99 +114,65 @@ class MainActivity : ComponentActivity() {
 fun MyNavigationDrawer(
     innerPadding: PaddingValues = PaddingValues(0.dp)
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed )
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
+    // 定义抽屉物品列表及其对应的路线
+    val items = listOf("inbox", "outbox", "favorites", "trash", "label/1", "label/2")
+    val selectedItem = remember { mutableStateOf(items[0]) }
     ModalNavigationDrawer(
         drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Text(
-                    text = "Mail",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Inbox") },
-                    selected = true,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("inbox")
-                        }
-                    },
-                    icon = { Icon(Icons.Outlined.Info, contentDescription = null) }
-                )
-                NavigationDrawerItem(
-                    label = { Text("Outbox") },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("outbox")
-                        }
-                    },
-                    icon = { Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = null) }
-                )
-                NavigationDrawerItem(
-                    label = { Text("Favorites") },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("favorites")
-                        }
-                    },
-                    icon = { Icon(Icons.Outlined.FavoriteBorder, contentDescription = null) }
-                )
-                NavigationDrawerItem(
-                    label = { Text("Trash") },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("trash")
-                        }
-                    },
-                    icon = { Icon(Icons.Outlined.Delete, contentDescription = null) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = "Labels",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                NavigationDrawerItem(
-                    label = { Text("Label 1") },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("label/1")
-                        }
-                    },
-                    icon = { Icon(Icons.Outlined.ArrowDropDown, contentDescription = null) }
-                )
-                NavigationDrawerItem(
-                    label = { Text("Label 2") },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate("label/2")
-                        }
-                    },
-                    icon = { Icon(Icons.Outlined.ArrowDropDown, contentDescription = null) }
-                )
-            }
-        },
+         drawerContent = {
+             ModalDrawerSheet {
+                 Text(
+                     text = "Next OneDrive",
+                     modifier = Modifier.padding(16.dp),
+                     style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp
+                        )
+                 )
+                 // Loop through items to create the NavigationDrawerItem for each
+                 items.forEach{ item ->
+                     NavigationDrawerItem(
+                         label = { Text(item.capitalize(Locale.ROOT)) },
+                         selected = item == selectedItem.value,
+                         onClick = {
+                             scope.launch {
+                                 drawerState.close()
+                             }
+                                selectedItem.value = item
+                                navController.navigate(item){
+                                    popUpTo(navController.graph.startDestinationId){
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                         },
+                         icon = {
+                             Icon(
+                                 imageVector = when(item){
+                                        "inbox" -> Icons.Outlined.Home
+                                        "outbox" -> Icons.AutoMirrored.Outlined.Send
+                                        "favorites" -> Icons.Outlined.FavoriteBorder
+                                        "trash" -> Icons.Outlined.Delete
+                                        else -> Icons.Outlined.ArrowDropDown
+                                    },
+                                 contentDescription = null
+                             )
+                         }
+                     )
+                 }
+             }
+         },
         content = {
             NavHost(
                 navController = navController,
                 startDestination = "inbox"
-            ) {
-                composable("inbox") { InboxScreen(navController) }
+            ){
+                composable("inbox") { InboxScreen(navController)  }
                 composable("outbox") { OutboxScreen() }
                 composable("favorites") { FavoritesScreen() }
                 composable("trash") { TrashScreen() }
@@ -338,7 +306,7 @@ fun InboxScreen(navController: NavController) {
                         },
                         onSuccess = { token ->
                             // 成功后的操作
-                            successMessage = "Token: $token"
+                            successMessage = "Login Success"
                             println("Token $token")
                             showSuccessSnackbar = true // 重置状态
                             navController.navigate("outbox")
