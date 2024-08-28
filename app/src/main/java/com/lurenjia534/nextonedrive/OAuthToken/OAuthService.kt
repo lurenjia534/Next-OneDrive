@@ -2,6 +2,7 @@ package com.lurenjia534.nextonedrive.OAuthToken
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.window.SplashScreen
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.work.ListenableWorker.Result.Success
@@ -71,7 +72,7 @@ fun fetchAccessToken(
         }
     })
 }
-// Save the credentials to SharedPreferences
+// 将凭据保存到 SharedPreferences
 fun saveCredentials(
     context: Context,
     tenantId: String,
