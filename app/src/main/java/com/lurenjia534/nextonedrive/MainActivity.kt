@@ -6,8 +6,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,16 +20,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.ArrowBack
 
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DateRange
@@ -35,7 +47,10 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,9 +59,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -61,7 +79,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,9 +91,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -90,10 +112,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.lurenjia534.nextonedrive.ListItem.DriveItem
+import com.lurenjia534.nextonedrive.ListItem.Folder
+import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
+import com.lurenjia534.nextonedrive.ListItem.fetchDriveItems
 import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
 import java.util.Locale
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -186,7 +211,7 @@ fun MyNavigationDrawer(
             ) {
                 composable("inbox") { InboxScreen(navController) }
                 composable("outbox") { OutboxScreen() }
-                composable("favorites") { FavoritesScreen() }
+                composable("favorites") { FavoritesScreen<Any>() }
                 composable("trash") { TrashScreen() }
                 composable(
                     route = "label/{labelId}",
@@ -545,16 +570,240 @@ fun SettingItem(icon: ImageVector, title: String, subtitle: String? = null) {
     }
 }
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen() {
-    Text(
-        "Favorites Screen", modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+fun <Stirng> FavoritesScreen() {
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    // 动画状态
+    val animatedHeight by animateDpAsState(
+        targetValue = if (showBottomSheet) 300.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300), label = ""
+    )
+
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (showBottomSheet) 1f else 0f,
+        animationSpec = tween(durationMillis = 300), label = ""
+    )
+
+    val buttonAlpha by animateFloatAsState(
+        targetValue = if (showBottomSheet) 0f else 1f,
+        animationSpec = tween(durationMillis = 300), label = ""
+    )
+    // Status for holding the list of DriveItems
+    var driveItems by remember { mutableStateOf<List<DriveItem>?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf("") }
+    // ErrorSnackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    var currentFolderId by remember { mutableStateOf<String?>(null) }
+    var previousFolderId by remember { mutableStateOf<List<String>>(emptyList()) }
+    val context = LocalContext.current
+
+    // Fetch DriveItems when the screen is first loaded
+    fun loadItems(itemId: String? = null) {
+        isLoading = true
+        errorMessage = ""
+        if (itemId == null) {
+            fetchDriveItems(
+                context,
+                onSuccess = {
+                    driveItems = it
+                    isLoading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+                },
+                onError = { error ->
+                    errorMessage = error
+                    isLoading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar("错误: $error") }
+                }
+            )
+        } else {
+            fetchDriveItemChildren(
+                context,
+                itemId,
+                onSuccess = {
+                    driveItems = it
+                    isLoading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+                },
+                onError = { error ->
+                    errorMessage = error
+                    isLoading = false
+                    coroutineScope.launch { snackbarHostState.showSnackbar("错误: $error") }
+                }
+            )
+        }
+    }
+    LaunchedEffect(Unit) {
+        println("Current Folder ID: $currentFolderId")
+        println("Previous Folder IDs: $previousFolderId")
+        loadItems()
+    }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Favorites") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                       if (previousFolderId.isNotEmpty()){
+                           val lastFolderId = previousFolderId.last()
+                            previousFolderId = previousFolderId.dropLast(1)
+                           currentFolderId = lastFolderId
+
+                           // 确保lastFolderId不为null
+                           if (previousFolderId.isEmpty()){
+                               // 如果上一级ID为空，加载根目录
+                                 loadItems()
+                           }
+                       }else {
+                           // 如果没有上级目录，返回根目录
+                           currentFolderId = null
+                           loadItems()
+                       }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        showBottomSheet = true
+                    }
+                },
+                icon = { Icon(Icons.Outlined.Add, contentDescription = "Add") },
+                text = { Text("Add") },
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.alpha(buttonAlpha) // 控制按钮的透明度
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
+        content = { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isLoading -> {
+                        CircularProgressIndicator() // 显示加载指示器
+                    }
+
+                    errorMessage.isNotEmpty() -> {
+                        Text(
+                            text = errorMessage
+                        ) // 显示错误消息
+                    }
+
+                    driveItems != null -> {
+                        LazyColumn {
+                            item {
+                                Text(
+                                    text = "Next OneDrive File list",
+                                    style = TextStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 24.sp
+                                    ),
+                                    modifier = Modifier.padding(bottom = 32.dp, start = 16.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+
+                                )
+                            }
+                            items(driveItems!!) {item ->
+                                ListItem(
+                                    headlineContent = { Text(item.name) },
+                                    supportingContent = {
+                                        val folderSize = item.size.toDouble() / 1024 / 1024 / 1024
+                                        val fileSize = item.size.toDouble() / 1024 / 1024
+                                        Text(
+                                            if (item.folder != null)
+                                                String.format(Locale.getDefault(),"%.2f GB", folderSize)
+                                            else
+                                                String.format(Locale.getDefault(), "%.2f MB", fileSize)
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            imageVector = if (item.folder != null) Icons.Outlined.Menu else Icons.Outlined.Edit,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    modifier = Modifier.clickable{
+                                        if (item.folder != null) {
+                                            previousFolderId = previousFolderId + currentFolderId.orEmpty()
+                                            currentFolderId = item.id
+                                            loadItems(item.id)
+                                        }
+                                    },
+                                    trailingContent = {
+                                        Icon(
+                                            imageVector = Icons.Outlined.MoreVert,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    },
+
+                                )
+                               // HorizontalDivider()
+                            }
+                        }
+                    }
+
+                    else -> {
+                        Text(text = "No data found")
+                    }
+                }
+            }
+
+            if (animatedHeight > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = animatedAlpha * 0.5f))
+                        .clickable { showBottomSheet = false } // 点击外部关闭
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(animatedHeight)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                            )
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp)
+                            .alpha(animatedAlpha)
+                    ) {
+                        Text("Bottom Sheet Content", style = MaterialTheme.typography.titleLarge)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("You can place any content you like here.", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    showBottomSheet = false
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Close")
+                        }
+                    }
+                }
+            }
+        }
     )
 }
-
 @Composable
 fun TrashScreen() {
     Text(
