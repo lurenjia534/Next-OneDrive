@@ -417,7 +417,7 @@ fun OutboxScreen() {
                 title = { Text("设置") },
                 navigationIcon = {
                     IconButton(onClick = { /* Handle back button press */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
             )
