@@ -1,5 +1,7 @@
 package com.lurenjia534.nextonedrive.ListItem
 
+import com.google.gson.annotations.SerializedName
+
 data class DriveItemResponse(
     val value: List<DriveItem>
 )
@@ -17,6 +19,7 @@ data class DriveItem(
     val cTag: String,
     val fileSystemInfo: FileSystemInfo,
     val folder: Folder? = null,
+    @SerializedName("@microsoft.graph.downloadUrl") val downloadUrl: String? = null, // for download
     val file: File? = null,
     val image: Image? = null,
     val photo: Photo? = null,
