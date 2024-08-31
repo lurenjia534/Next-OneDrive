@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.ArrowBack
 
@@ -45,12 +46,15 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -751,9 +755,10 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                                     leadingContent = {
                                         Icon(
                                             imageVector = when{
-                                                item.folder != null -> Icons.Outlined.Menu
+                                                item.folder != null -> Icons.Outlined.Folder
                                                 item.file?.mimeType?.startsWith("image/") == true -> Icons.Outlined.Image
-                                                else -> Icons.Outlined.Menu
+                                              //  item.file?.mimeType?.startsWith("application/") == true -> Icons.Outlined.VideoFile
+                                                else -> Icons.AutoMirrored.Outlined.InsertDriveFile
                                             },
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
