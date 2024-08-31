@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
@@ -116,8 +117,10 @@ import com.lurenjia534.nextonedrive.ListItem.DriveItem
 import com.lurenjia534.nextonedrive.ListItem.Folder
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItems
+import com.lurenjia534.nextonedrive.MediaPreview.ImagePreviewScreen
 import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
+import java.net.URLEncoder
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -211,7 +214,7 @@ fun MyNavigationDrawer(
             ) {
                 composable("inbox") { InboxScreen(navController) }
                 composable("outbox") { OutboxScreen() }
-                composable("favorites") { FavoritesScreen<Any>() }
+                composable("favorites") { FavoritesScreen<Any>(navController) }
                 composable("trash") { TrashScreen() }
                 composable(
                     route = "label/{labelId}",
@@ -219,6 +222,13 @@ fun MyNavigationDrawer(
                 ) { backStackEntry ->
                     val labelId = backStackEntry.arguments?.getString("labelId") ?: "Unknown"
                     LabelScreen(label = labelId)
+                }
+                composable(
+                    route = "image_preview/{imageUrl}",
+                    arguments = listOf(navArgument("imageUrl") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val imageUrl = backStackEntry.arguments?.getString("imageUrl") ?: ""
+                    ImagePreviewScreen(imageUrl = imageUrl, navController = navController)
                 }
             }
         }
@@ -572,7 +582,7 @@ fun SettingItem(icon: ImageVector, title: String, subtitle: String? = null) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <Stirng> FavoritesScreen() {
+fun <Stirng> FavoritesScreen(navController: NavController) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     // 动画状态
@@ -646,21 +656,21 @@ fun <Stirng> FavoritesScreen() {
                 title = { Text("Favorites") },
                 navigationIcon = {
                     IconButton(onClick = {
-                       if (previousFolderId.isNotEmpty()){
-                           val lastFolderId = previousFolderId.last()
+                        if (previousFolderId.isNotEmpty()) {
+                            val lastFolderId = previousFolderId.last()
                             previousFolderId = previousFolderId.dropLast(1)
-                           currentFolderId = lastFolderId
+                            currentFolderId = lastFolderId
 
-                           // 确保lastFolderId不为null
-                           if (previousFolderId.isEmpty()){
-                               // 如果上一级ID为空，加载根目录
-                                 loadItems()
-                           }
-                       }else {
-                           // 如果没有上级目录，返回根目录
-                           currentFolderId = null
-                           loadItems()
-                       }
+                            // 确保lastFolderId不为null
+                            if (previousFolderId.isEmpty()) {
+                                // 如果上一级ID为空，加载根目录
+                                loadItems()
+                            }
+                        } else {
+                            // 如果没有上级目录，返回根目录
+                            currentFolderId = null
+                            loadItems()
+                        }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -715,9 +725,9 @@ fun <Stirng> FavoritesScreen() {
                                     modifier = Modifier.padding(bottom = 32.dp, start = 16.dp),
                                     color = MaterialTheme.colorScheme.primary,
 
-                                )
+                                    )
                             }
-                            items(driveItems!!) {item ->
+                            items(driveItems!!) { item ->
                                 ListItem(
                                     headlineContent = { Text(item.name) },
                                     supportingContent = {
@@ -725,24 +735,47 @@ fun <Stirng> FavoritesScreen() {
                                         val fileSize = item.size.toDouble() / 1024 / 1024
                                         Text(
                                             if (item.folder != null)
-                                                String.format(Locale.getDefault(),"%.2f GB", folderSize)
+                                                String.format(
+                                                    Locale.getDefault(),
+                                                    "%.2f GB",
+                                                    folderSize
+                                                )
                                             else
-                                                String.format(Locale.getDefault(), "%.2f MB", fileSize)
+                                                String.format(
+                                                    Locale.getDefault(),
+                                                    "%.2f MB",
+                                                    fileSize
+                                                )
                                         )
                                     },
                                     leadingContent = {
                                         Icon(
-                                            imageVector = if (item.folder != null) Icons.Outlined.Menu else Icons.Outlined.Edit,
+                                            imageVector = when{
+                                                item.folder != null -> Icons.Outlined.Menu
+                                                item.file?.mimeType?.startsWith("image/") == true -> Icons.Outlined.Image
+                                                else -> Icons.Outlined.Menu
+                                            },
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     },
-                                    modifier = Modifier.clickable{
+                                    modifier = Modifier.clickable {
                                         if (item.folder != null) {
-                                            previousFolderId = previousFolderId + currentFolderId.orEmpty()
+                                            previousFolderId =
+                                                previousFolderId + currentFolderId.orEmpty()
                                             currentFolderId = item.id
                                             loadItems(item.id)
+                                        } else if (item.file != null && item.downloadUrl != null) {
+                                           try {
+                                               val encodedUrl = URLEncoder.encode(item.downloadUrl, "UTF-8")
+                                               println("Navigating to: image_preview/$encodedUrl")  // 打印 URL
+                                               navController.navigate("image_preview/$encodedUrl")
+                                           }catch (e: Exception){
+                                              coroutineScope.launch {
+                                                  snackbarHostState.showSnackbar("Error: ${e.message}")
+                                              }
+                                           }
                                         }
                                     },
                                     trailingContent = {
@@ -753,8 +786,8 @@ fun <Stirng> FavoritesScreen() {
                                         )
                                     },
 
-                                )
-                               // HorizontalDivider()
+                                    )
+                                // HorizontalDivider()
                             }
                         }
                     }
@@ -786,7 +819,10 @@ fun <Stirng> FavoritesScreen() {
                     ) {
                         Text("Bottom Sheet Content", style = MaterialTheme.typography.titleLarge)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("You can place any content you like here.", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "You can place any content you like here.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
@@ -804,6 +840,7 @@ fun <Stirng> FavoritesScreen() {
         }
     )
 }
+
 @Composable
 fun TrashScreen() {
     Text(
