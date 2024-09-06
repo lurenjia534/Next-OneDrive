@@ -1,11 +1,11 @@
 package com.lurenjia534.nextonedrive
 
 import DriveInfoResponse
-import android.graphics.drawable.Icon
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,18 +28,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.Send
-import androidx.compose.material.icons.filled.ArrowBack
-
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
@@ -50,23 +44,17 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.InsertDriveFile
-import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.VideoFile
-import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -80,13 +68,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -103,27 +87,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.NavHost
-import androidx.navigation.compose.rememberNavController
-import com.lurenjia534.nextonedrive.ui.theme.NextOneDriveTheme
-import kotlinx.coroutines.launch
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lurenjia534.nextonedrive.ListItem.DriveItem
-import com.lurenjia534.nextonedrive.ListItem.Folder
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItems
+import com.lurenjia534.nextonedrive.MediaPreview.AudioPreviewScreen
 import com.lurenjia534.nextonedrive.MediaPreview.ImagePreviewScreen
+import com.lurenjia534.nextonedrive.MediaPreview.VideoPreviewScreen
 import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
+import com.lurenjia534.nextonedrive.ui.theme.NextOneDriveTheme
+import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.util.Locale
 
@@ -234,6 +217,21 @@ fun MyNavigationDrawer(
                     val imageUrl = backStackEntry.arguments?.getString("imageUrl") ?: ""
                     ImagePreviewScreen(imageUrl = imageUrl, navController = navController)
                 }
+                composable(
+                    route = "video_preview/{videoUrl}",
+                    arguments = listOf(navArgument("videoUrl") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val videoUrl = backStackEntry.arguments?.getString("videoUrl") ?: ""
+                    VideoPreviewScreen(videoUrl = videoUrl, navController = navController)
+                }
+                composable(
+                    route = "audio_preview/{audioUrl}",
+                    arguments = listOf(navArgument("audioUrl") { type = NavType.StringType })
+                ){ backStackEntry ->
+                    val audioUrl = backStackEntry.arguments?.getString("audioUrl") ?: ""
+                    AudioPreviewScreen(audioUrl = audioUrl, navController = navController)
+
+                }
             }
         }
     )
@@ -248,147 +246,168 @@ fun InboxScreen(navController: NavController) {
     var userId by remember { mutableStateOf("") }
     var grantType by remember { mutableStateOf("client_credentials") }
     var scope by remember { mutableStateOf("https://graph.microsoft.com/.default offline_access") }
+    var isLoading by remember { mutableStateOf(false) }
+
     // ErrorSnackbar state
     val snackbarHostState = remember { SnackbarHostState() }
-    var showErrorSnackbar by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-    // onSurface Snackbar Status
-    var showSuccessSnackbar by remember { mutableStateOf(false) }
-    var successMessage by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
     // Main layout
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = if (showSuccessSnackbar) Color.Black else Color.Black,  // 判断是否为成功 Snackbar 来设置背景颜色
-                    shape = MaterialTheme.shapes.extraSmall
-                )
-            }
+            SnackbarHost(snackbarHostState)
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .padding(paddingValues),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(paddingValues)
         ) {
-            // Title
-            Text(
-                text = "Next OneDrive LOGIN",
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
-            // Tenant ID TextField
-            OutlinedTextField(
-                value = tenantId,
-                onValueChange = { tenantId = it },
-                label = { Text("Tenant ID") },
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
-            // Client ID TextField
-            OutlinedTextField(
-                value = clientId,
-                onValueChange = { clientId = it },
-                label = { Text("Client ID") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
-            // Client Secret TextField
-            OutlinedTextField(
-                value = clientSecret,
-                onValueChange = { clientSecret = it },
-                label = { Text("Client Secret") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
-            // User ID TextField
-            OutlinedTextField(
-                value = userId,
-                onValueChange = { userId = it },
-                label = { Text("User ID") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
-            // Grant Type TextField
-            OutlinedTextField(
-                value = grantType,
-                onValueChange = { grantType = it },
-                label = { Text("Grant Type") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            )
-            // Scope TextField
-            OutlinedTextField(
-                value = scope,
-                onValueChange = { scope = it },
-                label = { Text("Scope") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            )
-            val context = LocalContext.current
-            // Login Button
-            OutlinedButton(
-                onClick = {
-                    // 这里你可以保存输入内容，或者将它们用于后续的 OAuth2 请求
-                    fetchAccessToken(
-                        context = context,
-                        tenantId = tenantId,
-                        clientId = clientId,
-                        clientSecret = clientSecret,
-                        grantType = grantType,
-                        scope = scope,
-                        userId = userId,
-                        onError = { message ->
-                            errorMessage = message
-                            showErrorSnackbar = true // 重置状态
-                        },
-                        onSuccess = { token ->
-                            // 成功后的操作
-                            successMessage = "Login Success"
-                            println("Token $token")
-                            showSuccessSnackbar = true // 重置状态
-                            navController.navigate("outbox")
-                        }
-                    )
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Login", color = Color.White)
-            }
-        }
-        // Show error snackbar
-        if (showErrorSnackbar) {
-            LaunchedEffect(snackbarHostState) {
-                snackbarHostState.showSnackbar(errorMessage)
-                showErrorSnackbar = false // 重置状态
-            }
-        }
-        // Show success snackbar
-        if (showSuccessSnackbar) {
-            LaunchedEffect(snackbarHostState) {
-                snackbarHostState.showSnackbar(successMessage)
-                showSuccessSnackbar = false // 重置状态
-                print("Token: $successMessage")
+                // Title
+                Text(
+                    text = "Next OneDrive LOGIN",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = 24.sp, fontWeight = FontWeight.Bold
+                    ),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Animated Cards for inputs
+                AnimatedCardWithInput(
+                    value = tenantId,
+                    onValueChange = { tenantId = it },
+                    label = "Tenant ID"
+                )
+
+                AnimatedVisibility(visible = tenantId.isNotBlank()) {
+                    AnimatedCardWithInput(
+                        value = clientId,
+                        onValueChange = { clientId = it },
+                        label = "Client ID"
+                    )
+                }
+
+                AnimatedVisibility(visible = clientId.isNotBlank()) {
+                    AnimatedCardWithInput(
+                        value = clientSecret,
+                        onValueChange = { clientSecret = it },
+                        label = "Client Secret",
+                        isPassword = true
+                    )
+                }
+
+                AnimatedVisibility(visible = clientSecret.isNotBlank()) {
+                    AnimatedCardWithInput(
+                        value = userId,
+                        onValueChange = { userId = it },
+                        label = "User ID"
+                    )
+                }
+
+                AnimatedVisibility(visible = userId.isNotBlank()) {
+                    AnimatedCardWithInput(
+                        value = grantType,
+                        onValueChange = { grantType = it },
+                        label = "Grant Type"
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible =  tenantId.isNotBlank() && clientId.isNotBlank() && clientSecret.isNotBlank() && userId.isNotBlank() && grantType.isNotBlank()
+                ) {
+                    AnimatedCardWithInput(
+                        value = scope,
+                        onValueChange = { scope = it },
+                        label = "Scope"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Login Button
+                AnimatedVisibility(visible = scope.isNotBlank()) {
+                    Button(
+                        onClick = {
+                            isLoading = true
+                            fetchAccessToken(
+                                context = context,
+                                tenantId = tenantId,
+                                clientId = clientId,
+                                clientSecret = clientSecret,
+                                grantType = grantType,
+                                scope = scope,
+                                userId = userId,
+                                onError = { message ->
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Error: $message")
+                                    }
+                                    isLoading = false
+                                },
+                                onSuccess = { token ->
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Login Successful")
+                                    }
+                                    isLoading = false
+                                    navController.navigate("outbox")
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text(text = "Login", color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+@Composable
+fun AnimatedCardWithInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isPassword: Boolean = false
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(text = label) },
+            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            singleLine = true
+        )
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -624,7 +643,7 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                 onSuccess = {
                     driveItems = it
                     isLoading = false
-                    coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+                 //   coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
                 },
                 onError = { error ->
                     errorMessage = error
@@ -639,7 +658,7 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                 onSuccess = {
                     driveItems = it
                     isLoading = false
-                    coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+             //       coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
                 },
                 onError = { error ->
                     errorMessage = error
@@ -757,7 +776,7 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                                             imageVector = when{
                                                 item.folder != null -> Icons.Outlined.Folder
                                                 item.file?.mimeType?.startsWith("image/") == true -> Icons.Outlined.Image
-                                              //  item.file?.mimeType?.startsWith("application/") == true -> Icons.Outlined.VideoFile
+                                                item.file?.mimeType?.startsWith("application/octet-stream") == true -> Icons.Outlined.VideoFile
                                                 else -> Icons.AutoMirrored.Outlined.InsertDriveFile
                                             },
                                             contentDescription = null,
@@ -766,24 +785,84 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                                         )
                                     },
                                     modifier = Modifier.clickable {
-                                        if (item.folder != null) {
-                                            previousFolderId =
-                                                previousFolderId + currentFolderId.orEmpty()
-                                            currentFolderId = item.id
-                                            loadItems(item.id)
-                                        } else if (item.file != null && item.downloadUrl != null) {
-                                           try {
-                                               val encodedUrl = URLEncoder.encode(item.downloadUrl, "UTF-8")
-                                               println("Navigating to: image_preview/$encodedUrl")  // 打印 URL
-                                               navController.navigate("image_preview/$encodedUrl")
-                                           }catch (e: Exception){
-                                              coroutineScope.launch {
-                                                  snackbarHostState.showSnackbar("Error: ${e.message}")
-                                              }
-                                           }
+                                        try {
+                                            when {
+                                                item.folder != null -> {
+                                                    // 如果是文件夹，更新目录 ID 并加载该文件夹的内容
+                                                    previousFolderId = previousFolderId + currentFolderId.orEmpty()
+                                                    currentFolderId = item.id
+                                                    loadItems(item.id)
+                                                }
+                                                item.file != null && item.downloadUrl != null -> {
+                                                    // 如果是文件，先进行 URL 编码
+                                                    val encodedUrl = URLEncoder.encode(item.downloadUrl, "UTF-8")
+                                                    println("Navigating to: image_preview/$encodedUrl")  // 打印 URL
+
+                                                    // 判断 MIME 类型，决定是导航到图片预览还是视频预览
+                                                    when {
+                                                        item.file.mimeType.startsWith("image/") -> {
+                                                            navController.navigate("image_preview/$encodedUrl")
+                                                        }
+                                                        item.file.mimeType.startsWith("video/") -> {
+                                                            navController.navigate("video_preview/$encodedUrl")
+                                                        }
+                                                        item.file.mimeType == "application/octet-stream" -> {
+                                                            // 处理 mkv 文件的情况
+                                                            navController.navigate("video_preview/$encodedUrl")
+                                                        }
+                                                        item.file.mimeType.startsWith("audio/") -> {
+                                                            navController.navigate("audio_preview/$encodedUrl")
+                                                        }
+                                                        // 如果MIME Type 为 application/octet-stream，通过文件扩展名判断
+                                                        item.file.mimeType == "application/octet-stream" -> {
+                                                            when{
+                                                                // 视频文件类型
+                                                                item.name.endsWith(".mkv", ignoreCase = true) ||
+                                                                        item.name.endsWith(".mp4", ignoreCase = true) ||
+                                                                        item.name.endsWith(".avi", ignoreCase = true) ||
+                                                                        item.name.endsWith(".mov", ignoreCase = true) ||
+                                                                        item.name.endsWith(".wmv", ignoreCase = true) ||
+                                                                        item.name.endsWith(".flv", ignoreCase = true) -> {
+                                                                    navController.navigate("video_preview/$encodedUrl")
+                                                                }
+                                                                // 音频文件类型
+                                                                item.name.endsWith(".mp3", ignoreCase = true) ||
+                                                                        item.name.endsWith(".flac", ignoreCase = true) ||
+                                                                        item.name.endsWith(".wav", ignoreCase = true) ||
+                                                                        item.name.endsWith(".aac", ignoreCase = true) ||
+                                                                        item.name.endsWith(".ogg", ignoreCase = true) ||
+                                                                        item.name.endsWith(".m4a", ignoreCase = true) -> {
+                                                                    navController.navigate("audio_preview/$encodedUrl")
+                                                                }
+                                                                item.name.endsWith(".png", ignoreCase = true) ||
+                                                                        item.name.endsWith(".jpg", ignoreCase = true) ||
+                                                                        item.name.endsWith(".jpeg", ignoreCase = true) -> {
+                                                                    navController.navigate("image_preview/$encodedUrl")
+                                                                }
+                                                            }
+                                                        }
+                                                        else -> {
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar("Unsupported file type")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                else -> {
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar("No action available")
+                                                    }
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            // 捕获任何异常并显示错误信息
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Error: ${e.message}")
+                                            }
                                         }
                                     },
-                                    trailingContent = {
+
+                                            trailingContent = {
                                         Icon(
                                             imageVector = Icons.Outlined.MoreVert,
                                             contentDescription = null,
@@ -796,7 +875,6 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                             }
                         }
                     }
-
                     else -> {
                         Text(text = "No data found")
                     }
