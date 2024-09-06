@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+    implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
     val nav_version = "2.8.0-rc01"
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
