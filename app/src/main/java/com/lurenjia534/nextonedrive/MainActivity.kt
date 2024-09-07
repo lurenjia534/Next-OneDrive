@@ -739,8 +739,10 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                     driveItems != null -> {
                         LazyColumn {
                             item {
+                                // 获取列表路径
+                                val currentPath = driveItems?.firstOrNull()?.parentReference?.path?.replace("/drive/root:", "/ > ") ?: "/"
                                 Text(
-                                    text = "Next OneDrive File list",
+                                    text = currentPath,
                                     style = TextStyle(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 24.sp
