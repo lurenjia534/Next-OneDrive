@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -39,7 +40,7 @@ fun VideoPreviewScreen(
         playWhenReady = true
     }
     Box(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)
+        modifier = Modifier.fillMaxSize().background(Color.Black)
     ) {
         AndroidView(
             factory = {ctx ->
