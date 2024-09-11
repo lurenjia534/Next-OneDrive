@@ -70,6 +70,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -230,7 +231,7 @@ fun MyNavigationDrawer(
                 composable(
                     route = "audio_preview/{audioUrl}",
                     arguments = listOf(navArgument("audioUrl") { type = NavType.StringType })
-                ){ backStackEntry ->
+                ) { backStackEntry ->
                     val audioUrl = backStackEntry.arguments?.getString("audioUrl") ?: ""
                     AudioPreviewScreen(audioUrl = audioUrl, navController = navController)
 
@@ -324,7 +325,7 @@ fun InboxScreen(navController: NavController) {
                 }
 
                 AnimatedVisibility(
-                    visible =  tenantId.isNotBlank() && clientId.isNotBlank() && clientSecret.isNotBlank() && userId.isNotBlank() && grantType.isNotBlank()
+                    visible = tenantId.isNotBlank() && clientId.isNotBlank() && clientSecret.isNotBlank() && userId.isNotBlank() && grantType.isNotBlank()
                 ) {
                     AnimatedCardWithInput(
                         value = scope,
@@ -363,7 +364,9 @@ fun InboxScreen(navController: NavController) {
                                 }
                             )
                         },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         enabled = !isLoading
                     ) {
                         if (isLoading) {
@@ -646,7 +649,7 @@ fun FavoritesScreen(navController: NavController) {
                 onSuccess = {
                     driveItems = it
                     isLoading = false
-                 //   coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+                    //   coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
                 },
                 onError = { error ->
                     errorMessage = error
@@ -661,7 +664,7 @@ fun FavoritesScreen(navController: NavController) {
                 onSuccess = {
                     driveItems = it
                     isLoading = false
-             //       coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
+                    //       coroutineScope.launch { snackbarHostState.showSnackbar("数据加载成功") }
                 },
                 onError = { error ->
                     errorMessage = error
@@ -743,7 +746,11 @@ fun FavoritesScreen(navController: NavController) {
                         LazyColumn {
                             item {
                                 // 获取列表路径
-                                val currentPath = driveItems?.firstOrNull()?.parentReference?.path?.replace("/drive/root:", "/ > ") ?: "/"
+                                val currentPath =
+                                    driveItems?.firstOrNull()?.parentReference?.path?.replace(
+                                        "/drive/root:",
+                                        "/ > "
+                                    ) ?: "/"
                                 Text(
                                     text = currentPath,
                                     style = TextStyle(
@@ -778,7 +785,7 @@ fun FavoritesScreen(navController: NavController) {
                                     },
                                     leadingContent = {
                                         Icon(
-                                            imageVector = when{
+                                            imageVector = when {
                                                 item.folder != null -> Icons.Outlined.Folder
                                                 item.file?.mimeType?.startsWith("image/") == true -> Icons.Outlined.Image
                                                 item.file?.mimeType?.startsWith("application/octet-stream") == true -> Icons.Outlined.VideoFile
@@ -794,13 +801,16 @@ fun FavoritesScreen(navController: NavController) {
                                             when {
                                                 item.folder != null -> {
                                                     // 如果是文件夹，更新目录 ID 并加载该文件夹的内容
-                                                    previousFolderId = previousFolderId + currentFolderId.orEmpty()
+                                                    previousFolderId =
+                                                        previousFolderId + currentFolderId.orEmpty()
                                                     currentFolderId = item.id
                                                     loadItems(item.id)
                                                 }
+
                                                 item.file != null && item.downloadUrl != null -> {
                                                     // 如果是文件，先进行 URL 编码
-                                                    val encodedUrl = URLEncoder.encode(item.downloadUrl, "UTF-8")
+                                                    val encodedUrl =
+                                                        URLEncoder.encode(item.downloadUrl, "UTF-8")
                                                     println("Navigating to: image_preview/$encodedUrl")  // 打印 URL
 
                                                     // 判断 MIME 类型，决定是导航到图片预览还是视频预览
@@ -808,44 +818,94 @@ fun FavoritesScreen(navController: NavController) {
                                                         item.file.mimeType.startsWith("image/") -> {
                                                             navController.navigate("image_preview/$encodedUrl")
                                                         }
+
                                                         item.file.mimeType.startsWith("video/") -> {
                                                             navController.navigate("video_preview/$encodedUrl")
                                                         }
+
                                                         item.file.mimeType == "application/octet-stream" -> {
                                                             // 处理 mkv 文件的情况
                                                             navController.navigate("video_preview/$encodedUrl")
                                                         }
+
                                                         item.file.mimeType.startsWith("audio/") -> {
                                                             navController.navigate("audio_preview/$encodedUrl")
                                                         }
                                                         // 如果MIME Type 为 application/octet-stream，通过文件扩展名判断
                                                         item.file.mimeType == "application/octet-stream" -> {
-                                                            when{
+                                                            when {
                                                                 // 视频文件类型
-                                                                item.name.endsWith(".mkv", ignoreCase = true) ||
-                                                                        item.name.endsWith(".mp4", ignoreCase = true) ||
-                                                                        item.name.endsWith(".avi", ignoreCase = true) ||
-                                                                        item.name.endsWith(".mov", ignoreCase = true) ||
-                                                                        item.name.endsWith(".wmv", ignoreCase = true) ||
-                                                                        item.name.endsWith(".flv", ignoreCase = true) -> {
+                                                                item.name.endsWith(
+                                                                    ".mkv",
+                                                                    ignoreCase = true
+                                                                ) ||
+                                                                        item.name.endsWith(
+                                                                            ".mp4",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".avi",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".mov",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".wmv",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".flv",
+                                                                            ignoreCase = true
+                                                                        ) -> {
                                                                     navController.navigate("video_preview/$encodedUrl")
                                                                 }
                                                                 // 音频文件类型
-                                                                item.name.endsWith(".mp3", ignoreCase = true) ||
-                                                                        item.name.endsWith(".flac", ignoreCase = true) ||
-                                                                        item.name.endsWith(".wav", ignoreCase = true) ||
-                                                                        item.name.endsWith(".aac", ignoreCase = true) ||
-                                                                        item.name.endsWith(".ogg", ignoreCase = true) ||
-                                                                        item.name.endsWith(".m4a", ignoreCase = true) -> {
+                                                                item.name.endsWith(
+                                                                    ".mp3",
+                                                                    ignoreCase = true
+                                                                ) ||
+                                                                        item.name.endsWith(
+                                                                            ".flac",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".wav",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".aac",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".ogg",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".m4a",
+                                                                            ignoreCase = true
+                                                                        ) -> {
                                                                     navController.navigate("audio_preview/$encodedUrl")
                                                                 }
-                                                                item.name.endsWith(".png", ignoreCase = true) ||
-                                                                        item.name.endsWith(".jpg", ignoreCase = true) ||
-                                                                        item.name.endsWith(".jpeg", ignoreCase = true) -> {
+
+                                                                item.name.endsWith(
+                                                                    ".png",
+                                                                    ignoreCase = true
+                                                                ) ||
+                                                                        item.name.endsWith(
+                                                                            ".jpg",
+                                                                            ignoreCase = true
+                                                                        ) ||
+                                                                        item.name.endsWith(
+                                                                            ".jpeg",
+                                                                            ignoreCase = true
+                                                                        ) -> {
                                                                     navController.navigate("image_preview/$encodedUrl")
                                                                 }
                                                             }
                                                         }
+
                                                         else -> {
                                                             coroutineScope.launch {
                                                                 snackbarHostState.showSnackbar("Unsupported file type")
@@ -853,6 +913,7 @@ fun FavoritesScreen(navController: NavController) {
                                                         }
                                                     }
                                                 }
+
                                                 else -> {
                                                     coroutineScope.launch {
                                                         snackbarHostState.showSnackbar("No action available")
@@ -867,7 +928,7 @@ fun FavoritesScreen(navController: NavController) {
                                         }
                                     },
 
-                                            trailingContent = {
+                                    trailingContent = {
                                         Icon(
                                             imageVector = Icons.Outlined.MoreVert,
                                             contentDescription = null,
@@ -880,6 +941,7 @@ fun FavoritesScreen(navController: NavController) {
                             }
                         }
                     }
+
                     else -> {
                         Text(text = "No data found")
                     }
@@ -908,36 +970,60 @@ fun FavoritesScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                            horizontalArrangement = Arrangement.spacedBy(
+                                16.dp,
+                                Alignment.CenterHorizontally
+                            )
                         ) {
                             // Share Button
                             IconButton(
                                 onClick = {},
-                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Outlined.Share, contentDescription = "Share")
-                                    Text("Share", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                    Text(
+                                        "Share",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                             // Upload Image Button
                             IconButton(
                                 onClick = {},
-                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Outlined.Image, contentDescription = "Image")
-                                    Text("Image", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                    Text(
+                                        "Image",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                             // Upload File Button
                             IconButton(
                                 onClick = {},
-                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Outlined.InsertDriveFile, contentDescription = "File")
-                                    Text("Upload File", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                    Icon(
+                                        Icons.Outlined.InsertDriveFile,
+                                        contentDescription = "File"
+                                    )
+                                    Text(
+                                        "Upload File",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                             // New Folder Button
@@ -945,9 +1031,11 @@ fun FavoritesScreen(navController: NavController) {
                             var folderName by remember { mutableStateOf("") }
                             IconButton(
                                 onClick = {
-                                        showDialog = true // 显示对话框
+                                    showDialog = true // 显示对话框
                                 },
-                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Outlined.Folder, contentDescription = "Folder")
@@ -987,18 +1075,19 @@ fun FavoritesScreen(navController: NavController) {
                                                                     loadItems(currentFolderId)
                                                                     showDialog = false // 关闭对话框
                                                                     folderName = "" // 清空输入框
-                                                                //    snackbarHostState.showSnackbar("Folder created successfully")
+                                                                    //    snackbarHostState.showSnackbar("Folder created successfully")
                                                                 },
                                                                 onError = {
+                                                                    loadItems(currentFolderId)
                                                                     showDialog = false // 关闭对话框
                                                                     folderName = "" // 清空输入框
-                                                                  //  snackbarHostState.showSnackbar("Error: $it")
+                                                                    //  snackbarHostState.showSnackbar("Error: $it")
                                                                 }
                                                             )
-                                                        }catch (e: Exception){
+                                                        } catch (e: Exception) {
                                                             showDialog = false // 关闭对话框
                                                             folderName = "" // 清空输入框
-                                                            snackbarHostState.showSnackbar("Error: ${e.message}") // 显示错误消息
+                                                            //  snackbarHostState.showSnackbar("Error: ${e.message}") // 显示错误消息
                                                         }
                                                     }
                                                 }
@@ -1008,7 +1097,7 @@ fun FavoritesScreen(navController: NavController) {
                                         }
                                     },
                                     dismissButton = {
-                                        Button(
+                                        TextButton(
                                             onClick = {
                                                 showDialog = false // 取消按钮关闭对话框
                                             }
