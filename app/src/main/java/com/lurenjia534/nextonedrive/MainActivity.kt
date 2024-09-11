@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,10 +45,12 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.VideoFile
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,10 +65,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,6 +99,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.lurenjia534.nextonedrive.Filefunction.createFolder
 import com.lurenjia534.nextonedrive.ListItem.DriveItem
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItems
@@ -201,7 +204,7 @@ fun MyNavigationDrawer(
             ) {
                 composable("inbox") { InboxScreen(navController) }
                 composable("outbox") { OutboxScreen() }
-                composable("favorites") { FavoritesScreen<Any>(navController) }
+                composable("favorites") { FavoritesScreen(navController) }
                 composable("trash") { TrashScreen() }
                 composable(
                     route = "label/{labelId}",
@@ -605,7 +608,7 @@ fun SettingItem(icon: ImageVector, title: String, subtitle: String? = null) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <Stirng> FavoritesScreen(navController: NavController) {
+fun FavoritesScreen(navController: NavController) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     // 动画状态
@@ -902,12 +905,121 @@ fun <Stirng> FavoritesScreen(navController: NavController) {
                             .padding(16.dp)
                             .alpha(animatedAlpha)
                     ) {
-                        Text("Bottom Sheet Content", style = MaterialTheme.typography.titleLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "You can place any content you like here.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                        ) {
+                            // Share Button
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.Share, contentDescription = "Share")
+                                    Text("Share", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                }
+                            }
+                            // Upload Image Button
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.Image, contentDescription = "Image")
+                                    Text("Image", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                }
+                            }
+                            // Upload File Button
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.InsertDriveFile, contentDescription = "File")
+                                    Text("Upload File", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                                }
+                            }
+                            // New Folder Button
+                            var showDialog by remember { mutableStateOf(false) }
+                            var folderName by remember { mutableStateOf("") }
+                            IconButton(
+                                onClick = {
+                                        showDialog = true // 显示对话框
+                                },
+                                modifier = Modifier.size(72.dp).border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Outlined.Folder, contentDescription = "Folder")
+                                    Text("New Folder", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            // Dialog
+                            if (showDialog) {
+                                AlertDialog(
+                                    onDismissRequest = {
+                                        showDialog = false // 当对话框外部被点击时关闭对话框
+                                    },
+                                    title = {
+                                        Text(text = "Create New Folder")
+                                    },
+                                    text = {
+                                        Column {
+                                            Text("Enter folder name:")
+                                            OutlinedTextField(
+                                                value = folderName,
+                                                onValueChange = { folderName = it },
+                                                label = { Text("Folder Name") }
+                                            )
+                                        }
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                if (folderName.isNotBlank()) {
+                                                    coroutineScope.launch {
+                                                        try {
+                                                            createFolder(
+                                                                context = context,
+                                                                folderName = folderName,
+                                                                parentFolderId = currentFolderId, // 传递当前文件夹ID
+                                                                onSuccess = {
+                                                                    loadItems(currentFolderId)
+                                                                    showDialog = false // 关闭对话框
+                                                                    folderName = "" // 清空输入框
+                                                                //    snackbarHostState.showSnackbar("Folder created successfully")
+                                                                },
+                                                                onError = {
+                                                                    showDialog = false // 关闭对话框
+                                                                    folderName = "" // 清空输入框
+                                                                  //  snackbarHostState.showSnackbar("Error: $it")
+                                                                }
+                                                            )
+                                                        }catch (e: Exception){
+                                                            showDialog = false // 关闭对话框
+                                                            folderName = "" // 清空输入框
+                                                            snackbarHostState.showSnackbar("Error: ${e.message}") // 显示错误消息
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Text("Create")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        Button(
+                                            onClick = {
+                                                showDialog = false // 取消按钮关闭对话框
+                                            }
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
