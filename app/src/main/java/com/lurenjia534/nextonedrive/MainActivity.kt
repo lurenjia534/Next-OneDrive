@@ -1072,22 +1072,26 @@ fun FavoritesScreen(navController: NavController) {
                                                                 folderName = folderName,
                                                                 parentFolderId = currentFolderId, // 传递当前文件夹ID
                                                                 onSuccess = {
-                                                                    loadItems(currentFolderId)
-                                                                    showDialog = false // 关闭对话框
-                                                                    folderName = "" // 清空输入框
-                                                                    //    snackbarHostState.showSnackbar("Folder created successfully")
+                                                                   coroutineScope.launch {
+                                                                       loadItems(currentFolderId)
+                                                                       showDialog = false // 关闭对话框
+                                                                       folderName = "" // 清空输入框
+                                                                       snackbarHostState.showSnackbar("Folder created successfully")
+                                                                   }
                                                                 },
                                                                 onError = {
-                                                                    loadItems(currentFolderId)
-                                                                    showDialog = false // 关闭对话框
-                                                                    folderName = "" // 清空输入框
-                                                                    //  snackbarHostState.showSnackbar("Error: $it")
+                                                                   coroutineScope.launch {
+                                                                       loadItems(currentFolderId)
+                                                                       showDialog = false // 关闭对话框
+                                                                       folderName = "" // 清空输入框
+                                                                       snackbarHostState.showSnackbar("Error: $it")
+                                                                   }
                                                                 }
                                                             )
                                                         } catch (e: Exception) {
                                                             showDialog = false // 关闭对话框
                                                             folderName = "" // 清空输入框
-                                                            //  snackbarHostState.showSnackbar("Error: ${e.message}") // 显示错误消息
+                                                            snackbarHostState.showSnackbar("Error: ${e.message}") // 显示错误消息
                                                         }
                                                     }
                                                 }
