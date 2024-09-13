@@ -2,6 +2,7 @@ package com.lurenjia534.nextonedrive
 
 import DriveInfoResponse
 import android.os.Bundle
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Face
@@ -50,6 +52,8 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -60,6 +64,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -91,6 +96,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1131,14 +1137,137 @@ fun FavoritesScreen(navController: NavController) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrashScreen() {
-    Text(
-        "Trash Screen", modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(
+                    text = "Download Queue",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    ),
+                ) },
+                navigationIcon = {},
+            )
+        },
+        content = { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+               LazyColumn(
+                   modifier = Modifier.fillMaxSize()
+               ) {
+                   items(downloadQueue){downloadItem ->
+                       DownloadQueueItem(downloadItem = downloadItem)
+                       Spacer(modifier = Modifier.height(16.dp))
+                   }
+               }
+            }
+        }
     )
 }
+
+@Composable
+fun DownloadQueueItem(downloadItem: DownloadItem) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 文件类型的Chip
+            Icon(
+                imageVector = when (downloadItem.fileType) {
+                    FileType.IMAGE -> Icons.Outlined.Image
+                    FileType.VIDEO -> Icons.Outlined.VideoFile
+                    FileType.MUSIC -> Icons.Outlined.Done
+                    FileType.DOCUMENT -> Icons.Outlined.InsertDriveFile
+                },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = downloadItem.fileName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                // 进度条展示下载进度
+                LinearProgressIndicator(
+                    progress = { downloadItem.progress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // tag 标签
+                Row {
+                    DownloadChip(fileType = downloadItem.fileType)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DownloadChip(fileType: FileType) {
+    val chipColor = when (fileType) {
+        FileType.IMAGE -> Color.Blue
+        FileType.VIDEO -> Color.Red
+        FileType.MUSIC -> Color.Green
+        FileType.DOCUMENT -> Color.Gray
+    }
+
+    AssistChip(
+        modifier = Modifier.padding(top = 8.dp),
+        onClick = {},
+        colors = AssistChipDefaults.assistChipColors(),
+        label = {
+            Text(
+                text = when (fileType) {
+                    FileType.IMAGE -> "Image"
+                    FileType.VIDEO -> "Video"
+                    FileType.MUSIC -> "Music"
+                    FileType.DOCUMENT -> "File"
+                }
+            )
+        }
+    )
+}
+
+// 数据模型
+data class DownloadItem(
+    val fileName: String,
+    val fileType: FileType,
+    val progress: Float // 0.0 to 1.0
+)
+
+enum class FileType {
+    IMAGE, VIDEO, MUSIC, DOCUMENT
+}
+
+// 示例下载队列
+val downloadQueue = listOf(
+    DownloadItem(fileName = "video.mp4", fileType = FileType.VIDEO, progress = 0.5f),
+    DownloadItem(fileName = "song.mp3", fileType = FileType.MUSIC, progress = 0.75f),
+    DownloadItem(fileName = "document.pdf", fileType = FileType.DOCUMENT, progress = 0.25f),
+    DownloadItem(fileName = "image.png", fileType = FileType.IMAGE, progress = 0.9f)
+)
 
 @Composable
 fun LabelScreen(label: String) {
