@@ -1,11 +1,17 @@
 package com.lurenjia534.nextonedrive
 
 import DriveInfoResponse
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.widget.Space
+import android.util.Log
+import android.Manifest
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -620,6 +626,17 @@ fun SettingItem(icon: ImageVector, title: String, subtitle: String? = null) {
 fun FavoritesScreen(navController: NavController) {
     var showBottomSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+    // Status for holding the list of DriveItems
+    var driveItems by remember { mutableStateOf<List<DriveItem>?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf("") }
+    // ErrorSnackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    var currentFolderId by remember { mutableStateOf<String?>(null) }
+    var previousFolderId by remember { mutableStateOf<List<String>>(emptyList()) }
+
     // 动画状态
     val animatedHeight by animateDpAsState(
         targetValue = if (showBottomSheet) 300.dp else 0.dp,
@@ -635,15 +652,44 @@ fun FavoritesScreen(navController: NavController) {
         targetValue = if (showBottomSheet) 0f else 1f,
         animationSpec = tween(durationMillis = 300), label = ""
     )
-    // Status for holding the list of DriveItems
-    var driveItems by remember { mutableStateOf<List<DriveItem>?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf("") }
-    // ErrorSnackbar state
-    val snackbarHostState = remember { SnackbarHostState() }
-    var currentFolderId by remember { mutableStateOf<String?>(null) }
-    var previousFolderId by remember { mutableStateOf<List<String>>(emptyList()) }
     val context = LocalContext.current
+
+    // 图片选择器的 Launcher，支持多选
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                Log.d("ImagePicker", "Selected Image URIs: $uris")
+                coroutineScope.launch {
+                    showBottomSheet = false
+                    snackbarHostState.showSnackbar("Selected ${uris.size} images")
+                }
+                // 这里可以处理选中的图片列表 `uris`
+                selectedImageUris = uris // 保存选中的 URIs
+            } else {
+                Log.d("ImagePicker", "No image selected")
+            }
+        }
+    )
+
+    // 权限请求
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permission is granted
+            // 如果权限被授予，启动图片选择器（多选）
+            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        } else {
+            // Permission is denied
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Permission denied")
+            }
+        }
+    }
+
+
+
 
     // Fetch DriveItems when the screen is first loaded
     fun loadItems(itemId: String? = null) {
@@ -997,9 +1043,21 @@ fun FavoritesScreen(navController: NavController) {
                                     )
                                 }
                             }
+
                             // Upload Image Button
                             IconButton(
-                                onClick = {},
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        // Android 13 及以上，使用 READ_MEDIA_IMAGES 权限
+                                        permissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
+                                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                        // Android 10 到 Android 12，使用 READ_EXTERNAL_STORAGE 权限
+                                        permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                    } else {
+                                        // Android 9 及以下，使用常规存储权限
+                                        permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                    }
+                                },
                                 modifier = Modifier
                                     .size(72.dp)
                                     .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
