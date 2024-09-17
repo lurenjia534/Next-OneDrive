@@ -1196,6 +1196,7 @@ fun FavoritesScreen(navController: NavController) {
                                                                        loadItems(currentFolderId)
                                                                        showDialog = false // 关闭对话框
                                                                        folderName = "" // 清空输入框
+                                                                       showBottomSheet = false
                                                                        snackbarHostState.showSnackbar("Folder created successfully")
                                                                    }
                                                                 },
@@ -1204,6 +1205,7 @@ fun FavoritesScreen(navController: NavController) {
                                                                        loadItems(currentFolderId)
                                                                        showDialog = false // 关闭对话框
                                                                        folderName = "" // 清空输入框
+                                                                       showBottomSheet = false
                                                                        snackbarHostState.showSnackbar("Error: $it")
                                                                    }
                                                                 }
