@@ -15,14 +15,14 @@ interface FileApiService {
         @Header("Authorization") authorization: String,
         @Path("userId") userId: String,
         @Body requestBody : CreateFolderRequest
-    ): Call<DriveItem>
+    ): DriveItem
     @POST("users/{userId}/drive/items/{parentItemId}/children")
     suspend fun createFolderInSubFolder(
         @Path("userId") userId: String,
         @Path("parentItemId") parentItemId: String,
         @Header("Authorization") authorization: String,
         @Body requestBody: CreateFolderRequest
-    ): Call<DriveItem>
+    ): DriveItem
     // 上传文件（新文件）
     @PUT("users/{userId}/drive/items/{parentId}:/{filename}:/content")
     suspend fun uploadFile(

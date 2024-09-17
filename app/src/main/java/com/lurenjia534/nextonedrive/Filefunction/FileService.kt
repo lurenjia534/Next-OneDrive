@@ -32,39 +32,35 @@ suspend fun createFolder(
             folder = emptyMap()  // 这是一个空的 JSON 对象，表示要创建文件夹
         )
 
-        val call = if (parentFolderId != null) {
-            apiService.createFolderInSubFolder(
-                userId = userId,
-                parentItemId = parentFolderId,  // 使用父文件夹 ID
-                authorization = "Bearer $token",
-                requestBody = requestBody
-            )
-        } else {
-            apiService.createFolder(
-                userId = userId,
-                authorization = "Bearer $token",
-                requestBody = requestBody
-            )
+        try {
+            // 处理父文件夹存在和不存在的情况
+            val driveItem = if (parentFolderId != null) {
+                apiService.createFolderInSubFolder(
+                    userId = userId,
+                    parentItemId = parentFolderId,  // 使用父文件夹 ID
+                    authorization = "Bearer $token",
+                    requestBody = requestBody
+                )
+            } else {
+                apiService.createFolder(
+                    userId = userId,
+                    authorization = "Bearer $token",
+                    requestBody = requestBody
+                )
+            }
+
+            // 由于createFolderInSubFolder 和 createFolder 是suspend 函数，直接返回driveItem
+            onSuccess(driveItem)
+
+        } catch (e: Exception) {
+            onError("Error: ${e.message}")
         }
-
-
-        call.enqueue(object : Callback<DriveItem> {
-            override fun onResponse(call: Call<DriveItem>, response: Response<DriveItem>) {
-                if (response.isSuccessful) {
-                    response.body()?.let { onSuccess(it) }
-                } else {
-                    onError("Error: ${response.errorBody()?.string() ?: "Unknown error"}")
-                }
-            }
-
-            override fun onFailure(call: Call<DriveItem>, t: Throwable) {
-                onError("Network Error: ${t.message}")
-            }
-        })
-    }else{
+    } else {
         onError("No credentials found")
     }
 }
+
+
 
 // 上传文件
 suspend fun uploadFile(
