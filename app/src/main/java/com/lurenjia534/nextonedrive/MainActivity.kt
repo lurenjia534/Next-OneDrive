@@ -87,6 +87,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -112,7 +113,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.lurenjia534.nextonedrive.Filefunction.UploadDialog
 import com.lurenjia534.nextonedrive.Filefunction.createFolder
+import com.lurenjia534.nextonedrive.Filefunction.uploadFile
 import com.lurenjia534.nextonedrive.ListItem.DriveItem
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItems
@@ -122,7 +125,11 @@ import com.lurenjia534.nextonedrive.MediaPreview.VideoPreviewScreen
 import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
 import com.lurenjia534.nextonedrive.ui.theme.NextOneDriveTheme
+import createNotificationChannel
 import kotlinx.coroutines.launch
+import showUploadCompleteNotification
+import showUploadNotification
+import updateNotificationProgress
 import java.net.URLEncoder
 import java.util.Locale
 
@@ -654,43 +661,6 @@ fun FavoritesScreen(navController: NavController) {
     )
     val context = LocalContext.current
 
-    // 图片选择器的 Launcher，支持多选
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-        onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                Log.d("ImagePicker", "Selected Image URIs: $uris")
-                coroutineScope.launch {
-                    showBottomSheet = false
-                    snackbarHostState.showSnackbar("Selected ${uris.size} images")
-                }
-                // 这里可以处理选中的图片列表 `uris`
-                selectedImageUris = uris // 保存选中的 URIs
-            } else {
-                Log.d("ImagePicker", "No image selected")
-            }
-        }
-    )
-
-    // 权限请求
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // Permission is granted
-            // 如果权限被授予，启动图片选择器（多选）
-            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        } else {
-            // Permission is denied
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar("Permission denied")
-            }
-        }
-    }
-
-
-
-
     // Fetch DriveItems when the screen is first loaded
     fun loadItems(itemId: String? = null) {
         isLoading = true
@@ -731,6 +701,92 @@ fun FavoritesScreen(navController: NavController) {
         println("Previous Folder IDs: $previousFolderId")
         loadItems()
     }
+
+    var showUploadDialog by remember { mutableStateOf(false) }
+    var filesUploaded by remember { mutableIntStateOf(0) }
+    var totalFiles by remember { mutableIntStateOf(0) }
+
+    // 上传文件时的对话框
+    UploadDialog(
+        isDialogOpen = showUploadDialog,
+        filesUploaded = filesUploaded,
+        totalFiles = totalFiles,
+        onDismiss = {
+            showUploadDialog = false // 关闭对话框
+        }
+    )
+
+    // 图片选择器的 Launcher，支持多选
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                Log.d("ImagePicker", "Selected Image URIs: $uris")
+                coroutineScope.launch {
+                    // 关闭底部表单 显示上传对话框
+                    showBottomSheet = false
+                    showUploadDialog = true
+                    createNotificationChannel(context) // 确保通知渠道已创建
+                    // 设置文件总数并初始化上传的文件数
+                    totalFiles = uris.size
+                    filesUploaded = 0
+                    // 显示 Snackbar
+                    snackbarHostState.showSnackbar("Selected ${uris.size} images")
+                    // 显示上传通知
+                    showUploadNotification(context, totalFiles)
+                    // 上传图片
+                    uris.forEachIndexed { index, uri ->
+                        uploadFile(
+                            context = context,
+                            uri = uri,  // 将 Uri 传递给上传函数
+                            parentId = currentFolderId ?: "root", // 父文件夹 ID
+                            onSuccess = { driveItem ->
+                                Log.d("ImageUpload", "Image uploaded: ${driveItem.name}")
+                                // 更新上传的文件数
+                                filesUploaded = index + 1
+                                // 更新通知进度
+                                updateNotificationProgress(context, filesUploaded, totalFiles)
+                                // 上传成功后，重新加载文件列表
+                                if (filesUploaded == totalFiles) {
+                                    loadItems(currentFolderId)
+                                    // 关闭上传对话框
+                                    showUploadDialog = false
+                                    // 上传完成通知
+                                    showUploadCompleteNotification(context)
+                                }
+                            },
+                            onError = { error ->
+                                Log.e("ImageUpload", "Error uploading image: $error")
+                            }
+                        )
+                    }
+                }
+                // 这里可以处理选中的图片列表 `uris`
+                selectedImageUris = uris // 保存选中的 URIs
+            } else {
+                Log.d("ImagePicker", "No image selected")
+            }
+        }
+    )
+
+
+    // 权限请求
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permission is granted
+            // 如果权限被授予，启动图片选择器（多选）
+            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        } else {
+            // Permission is denied
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Permission denied")
+            }
+        }
+    }
+
+
     Scaffold(
         topBar = {
             TopAppBar(
