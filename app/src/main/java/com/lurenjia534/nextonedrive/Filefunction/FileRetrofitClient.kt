@@ -1,5 +1,5 @@
 package com.lurenjia534.nextonedrive.Filefunction
-
+// FileRetrofitClient.kt
 object FileRetrofitClient {
     private const val BASE_URL = "https://graph.microsoft.com/v1.0/"
     private val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor().apply {
