@@ -17,3 +17,21 @@ data class UploadFileRequest(
     val filename: String,
     val fileContent: RequestBody
 )
+
+data class CreateLinkRequest(
+    val type: String,  // "view", "edit", or "embed"
+    val scope: String? = null  // "anonymous" or "organization"
+)
+
+data class PermissionResponse(
+    val id: String,
+    val roles: List<String>,
+    val link: Link
+)
+
+data class Link(
+    val type: String,
+    val scope: String?,
+    val webUrl: String,
+    val webHtml: String? = null // 仅在 embed 类型下可用
+)
