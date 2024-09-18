@@ -4,6 +4,7 @@ import com.lurenjia534.nextonedrive.ListItem.DriveItem
 import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -41,4 +42,19 @@ interface FileApiService {
         @Header("Authorization") authorization: String,
         @Body fileContent: RequestBody
     ): Call<DriveItem>
+    // 删除文件
+    @DELETE("users/{userId}/drive/items/{itemId}")
+    suspend fun deleteDriveItem(
+        @Path("userId") userId: String,
+        @Path("itemId") itemId: String,
+        @Header("Authorization") authorization: String
+    ): retrofit2.Response<Void>
+    // 创建共享链接
+    @POST("users/{userId}/drive/items/{itemId}/createLink")
+    suspend fun createShareableLink(
+        @Path("userId") userId: String,
+        @Path("itemId") itemId: String,
+        @Header("Authorization") authorization: String,
+        @Body requestBody: CreateLinkRequest
+    ): PermissionResponse
 }
