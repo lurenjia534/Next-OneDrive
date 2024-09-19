@@ -71,6 +71,7 @@ dependencies {
     implementation ("com.squareup.okhttp3:logging-interceptor:4.9.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation ("androidx.compose.material:material-icons-extended:1.7.0-rc01")
+    implementation("androidx.compose.animation:animation:1.7.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
