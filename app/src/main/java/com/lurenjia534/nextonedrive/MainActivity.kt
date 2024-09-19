@@ -16,6 +16,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +41,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
@@ -52,6 +57,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.MoreVert
@@ -64,10 +70,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -76,6 +86,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -113,8 +125,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.lurenjia534.nextonedrive.Filefunction.ShareLinkDialog
 import com.lurenjia534.nextonedrive.Filefunction.UploadDialog
 import com.lurenjia534.nextonedrive.Filefunction.createFolder
+import com.lurenjia534.nextonedrive.Filefunction.createShareableLink
+import com.lurenjia534.nextonedrive.Filefunction.deleteDriveItem
 import com.lurenjia534.nextonedrive.Filefunction.uploadFile
 import com.lurenjia534.nextonedrive.ListItem.DriveItem
 import com.lurenjia534.nextonedrive.ListItem.fetchDriveItemChildren
@@ -126,12 +141,14 @@ import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
 import com.lurenjia534.nextonedrive.ui.theme.NextOneDriveTheme
 import createNotificationChannel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import showUploadCompleteNotification
 import showUploadNotification
 import updateNotificationProgress
 import java.net.URLEncoder
 import java.util.Locale
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,6 +163,115 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+@Preview
+@Composable
+fun MyNavigationRail(
+    innerPadding: PaddingValues = PaddingValues(0.dp)
+) {
+    val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
+
+    // 定义导航栏物品列表及其对应的路线
+    val items = listOf("inbox", "outbox", "favorites", "trash", "label/1", "label/2")
+    val selectedItem = remember { mutableStateOf(items[0]) }
+
+    // 使用 Row 以便左侧放置 NavigationRail，右侧放置内容
+    Row(modifier = Modifier.fillMaxSize()) {
+        NavigationRail(
+            modifier = Modifier.fillMaxHeight(),
+            header = {
+                Icon(
+                    imageVector = Icons.Outlined.Home,
+                    contentDescription = "App Icon",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(8.dp)
+                )
+            },
+            content = {
+                // 遍历物品列表以创建 NavigationRailItem
+                items.forEach { item ->
+                    NavigationRailItem(
+                        selected = item == selectedItem.value,
+                        onClick = {
+                            selectedItem.value = item
+                            scope.launch {
+                                navController.navigate(item) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        label = {
+                            Text(item.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                            })
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = when (item) {
+                                    "inbox" -> Icons.Outlined.Home
+                                    "outbox" -> Icons.AutoMirrored.Outlined.Send
+                                    "favorites" -> Icons.Outlined.FavoriteBorder
+                                    "trash" -> Icons.Outlined.Delete
+                                    else -> Icons.Outlined.ArrowDropDown
+                                },
+                                contentDescription = null
+                            )
+                        }
+                    )
+                }
+            }
+        )
+
+        // 内容区域
+        NavHost(
+            navController = navController,
+            startDestination = "inbox",
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            composable("inbox") { InboxScreen(navController) }
+            composable("outbox") { OutboxScreen() }
+            composable("favorites") { FavoritesScreen(navController) }
+            composable("trash") { TrashScreen() }
+            composable(
+                route = "label/{labelId}",
+                arguments = listOf(navArgument("labelId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val labelId = backStackEntry.arguments?.getString("labelId") ?: "Unknown"
+                LabelScreen(label = labelId)
+            }
+            composable(
+                route = "image_preview/{imageUrl}",
+                arguments = listOf(navArgument("imageUrl") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val imageUrl = backStackEntry.arguments?.getString("imageUrl") ?: ""
+                ImagePreviewScreen(imageUrl = imageUrl, navController = navController)
+            }
+            composable(
+                route = "video_preview/{videoUrl}",
+                arguments = listOf(navArgument("videoUrl") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val videoUrl = backStackEntry.arguments?.getString("videoUrl") ?: ""
+                VideoPreviewScreen(videoUrl = videoUrl, navController = navController)
+            }
+            composable(
+                route = "audio_preview/{audioUrl}",
+                arguments = listOf(navArgument("audioUrl") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val audioUrl = backStackEntry.arguments?.getString("audioUrl") ?: ""
+                AudioPreviewScreen(audioUrl = audioUrl, navController = navController)
+            }
+        }
+    }
+}
+
 
 @Preview
 @Composable
@@ -262,7 +388,7 @@ fun MyNavigationDrawer(
 
 @Composable
 fun InboxScreen(navController: NavController) {
-    // State variables for input fields
+    // 状态变量
     var tenantId by remember { mutableStateOf("") }
     var clientId by remember { mutableStateOf("") }
     var clientSecret by remember { mutableStateOf("") }
@@ -271,12 +397,14 @@ fun InboxScreen(navController: NavController) {
     var scope by remember { mutableStateOf("https://graph.microsoft.com/.default offline_access") }
     var isLoading by remember { mutableStateOf(false) }
 
-    // ErrorSnackbar state
+    // 错误消息
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Main layout
+    // 密码可见性
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
     Scaffold(
         snackbarHost = {
             SnackbarHost(snackbarHostState)
@@ -291,72 +419,124 @@ fun InboxScreen(navController: NavController) {
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.Top,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Title
+                // 标题
                 Text(
                     text = "Next OneDrive LOGIN",
                     style = MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = 24.sp, fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.padding(bottom = 16.dp)
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 )
 
-                // Animated Cards for inputs
-                AnimatedCardWithInput(
+                // Tenant ID 输入
+                InputField(
                     value = tenantId,
                     onValueChange = { tenantId = it },
-                    label = "Tenant ID"
+                    label = "Tenant ID",
+                    isError = tenantId.isBlank(),
+                    errorMessage = if (tenantId.isBlank()) "Tenant ID 不能为空" else null
                 )
 
-                AnimatedVisibility(visible = tenantId.isNotBlank()) {
-                    AnimatedCardWithInput(
+                // Client ID 输入
+                AnimatedVisibility(
+                    visible = tenantId.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    InputField(
                         value = clientId,
                         onValueChange = { clientId = it },
-                        label = "Client ID"
+                        label = "Client ID",
+                        isError = clientId.isBlank(),
+                        errorMessage = if (clientId.isBlank()) "Client ID 不能为空" else null
                     )
                 }
 
-                AnimatedVisibility(visible = clientId.isNotBlank()) {
-                    AnimatedCardWithInput(
+                // Client Secret 输入
+                AnimatedVisibility(
+                    visible = clientId.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    InputField(
                         value = clientSecret,
                         onValueChange = { clientSecret = it },
                         label = "Client Secret",
-                        isPassword = true
+                        isPassword = !isPasswordVisible,
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码"
+                                )
+                            }
+                        },
+                        isError = clientSecret.isBlank(),
+                        errorMessage = if (clientSecret.isBlank()) "Client Secret 不能为空" else null
                     )
                 }
 
-                AnimatedVisibility(visible = clientSecret.isNotBlank()) {
-                    AnimatedCardWithInput(
+                // User ID 输入
+                AnimatedVisibility(
+                    visible = clientSecret.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    InputField(
                         value = userId,
                         onValueChange = { userId = it },
-                        label = "User ID"
+                        label = "User ID",
+                        isError = userId.isBlank(),
+                        errorMessage = if (userId.isBlank()) "User ID 不能为空" else null
                     )
                 }
 
-                AnimatedVisibility(visible = userId.isNotBlank()) {
-                    AnimatedCardWithInput(
+                // Grant Type 输入
+                AnimatedVisibility(
+                    visible = userId.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    InputField(
                         value = grantType,
                         onValueChange = { grantType = it },
-                        label = "Grant Type"
+                        label = "Grant Type",
+                        isError = grantType.isBlank(),
+                        errorMessage = if (grantType.isBlank()) "Grant Type 不能为空" else null
                     )
                 }
 
+                // Scope 输入
                 AnimatedVisibility(
-                    visible = tenantId.isNotBlank() && clientId.isNotBlank() && clientSecret.isNotBlank() && userId.isNotBlank() && grantType.isNotBlank()
+                    visible = tenantId.isNotBlank() && clientId.isNotBlank() && clientSecret.isNotBlank() && userId.isNotBlank() && grantType.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    AnimatedCardWithInput(
+                    InputField(
                         value = scope,
                         onValueChange = { scope = it },
-                        label = "Scope"
+                        label = "Scope",
+                        isError = scope.isBlank(),
+                        errorMessage = if (scope.isBlank()) "Scope 不能为空" else null
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Login Button
-                AnimatedVisibility(visible = scope.isNotBlank()) {
+                // 登录按钮
+                AnimatedVisibility(
+                    visible = tenantId.isNotBlank() &&
+                            clientId.isNotBlank() &&
+                            clientSecret.isNotBlank() &&
+                            userId.isNotBlank() &&
+                            grantType.isNotBlank() &&
+                            scope.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     Button(
                         onClick = {
                             isLoading = true
@@ -370,13 +550,13 @@ fun InboxScreen(navController: NavController) {
                                 userId = userId,
                                 onError = { message ->
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Error: $message")
+                                        snackbarHostState.showSnackbar("错误: $message")
                                     }
                                     isLoading = false
                                 },
                                 onSuccess = { token ->
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Login Successful")
+                                        snackbarHostState.showSnackbar("登录成功")
                                     }
                                     isLoading = false
                                     navController.navigate("outbox")
@@ -390,13 +570,25 @@ fun InboxScreen(navController: NavController) {
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
-                            Text(text = "Login", color = MaterialTheme.colorScheme.onPrimary)
+                            Text(text = "登录", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
+                }
+            }
+
+            // 全屏加载指示器
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -404,35 +596,36 @@ fun InboxScreen(navController: NavController) {
 }
 
 @Composable
-fun AnimatedCardWithInput(
+fun InputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    isPassword: Boolean = false
+    isPassword: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-    ) {
+    Column {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(text = label) },
+            label = { Text(label) },
+            isError = isError,
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+            trailingIcon = trailingIcon,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            singleLine = true
         )
+        if (isError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+        }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -641,6 +834,7 @@ fun FavoritesScreen(navController: NavController) {
     var errorMessage by remember { mutableStateOf("") }
     // ErrorSnackbar state
     val snackbarHostState = remember { SnackbarHostState() }
+    // 当前文件夹ID和上一级文件夹ID
     var currentFolderId by remember { mutableStateOf<String?>(null) }
     var previousFolderId by remember { mutableStateOf<List<String>>(emptyList()) }
 
@@ -757,6 +951,10 @@ fun FavoritesScreen(navController: NavController) {
                             },
                             onError = { error ->
                                 Log.e("ImageUpload", "Error uploading image: $error")
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Error: $error")
+                                    showUploadDialog = false  // 上传失败时关闭对话框
+                                }
                             }
                         )
                     }
@@ -1037,14 +1235,123 @@ fun FavoritesScreen(navController: NavController) {
                                     },
 
                                     trailingContent = {
-                                        Icon(
-                                            imageVector = Icons.Outlined.MoreVert,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                    },
+                                        var expanded by remember { mutableStateOf(false) }
+                                        var showDialog by remember { mutableStateOf(false) }
+                                        val context = LocalContext.current
+                                        Box {
+                                            IconButton(onClick = { expanded = true }) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.MoreVert,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                            DropdownMenu(
+                                                expanded = expanded,
+                                                onDismissRequest = { expanded = false }
+                                            ) {
+                                                DropdownMenuItem(
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Outlined.Info,
+                                                            contentDescription = "Info"
+                                                        )
+                                                    },
+                                                    text = { Text("info") },
+                                                    onClick = {
+                                                        expanded = false
+                                                        // 逻辑
+                                                    }
+                                                )
+                                                HorizontalDivider()
+                                                DropdownMenuItem(
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Outlined.Delete,
+                                                            contentDescription = "Delete"
+                                                        )
+                                                    },
+                                                    text = { Text("Delete") },
+                                                    onClick = {
+                                                        expanded = false
+                                                        coroutineScope.launch {
+                                                            deleteDriveItem(
+                                                                context = context,
+                                                                itemId = item.id, // 传递文件ID
+                                                                onSuccess = {
+                                                                    loadItems(currentFolderId)
+                                                                    coroutineScope.launch {
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "File deleted successfully"
+                                                                        )
+                                                                    }
+                                                                },
+                                                                onError = {
+                                                                    loadItems(currentFolderId)
+                                                                    coroutineScope.launch {
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "File deleted successfully"
+                                                                        )
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            imageVector = Icons.Outlined.Share,
+                                                            contentDescription = "Share"
+                                                        )
+                                                    },
+                                                    text = { Text("Share") },
+                                                    onClick = {
+                                                        expanded = false
+                                                        // 分享文件的逻辑
+                                                        showDialog = true
+                                                    }
+                                                )
+                                            }
+                                            // 使用 LaunchedEffect 以确保 Dialog 在 DropdownMenu 完全关闭后显示
+                                            LaunchedEffect(expanded) {
+                                                if (!expanded && showDialog) {
+                                                    showDialog = true
+                                                }
+                                            }
 
-                                    )
+                                            if (showDialog) {
+                                                ShareLinkDialog(
+                                                    onDismiss = { showDialog = false },
+                                                    onShareLinkCreated = { linkType, scope ->
+                                                        coroutineScope.launch {
+                                                            createShareableLink(
+                                                                context = context,
+                                                                itemId = item.id,  // 使用当前项目的ID
+                                                                linkType = linkType,
+                                                                scope = scope,
+                                                                onSuccess = { shareLink ->
+                                                                    coroutineScope.launch {
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "Link created: $shareLink"
+                                                                        )
+                                                                    }
+                                                                },
+                                                                onError = { error ->
+                                                                    coroutineScope.launch {
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "Error: $error"
+                                                                        )
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    },
+                                )
                                 // HorizontalDivider()
                             }
                         }
@@ -1182,7 +1489,7 @@ fun FavoritesScreen(navController: NavController) {
                                         }
                                     },
                                     confirmButton = {
-                                        Button(
+                                        TextButton(
                                             onClick = {
                                                 if (folderName.isNotBlank()) {
                                                     coroutineScope.launch {
@@ -1192,22 +1499,26 @@ fun FavoritesScreen(navController: NavController) {
                                                                 folderName = folderName,
                                                                 parentFolderId = currentFolderId, // 传递当前文件夹ID
                                                                 onSuccess = {
-                                                                   coroutineScope.launch {
-                                                                       loadItems(currentFolderId)
-                                                                       showDialog = false // 关闭对话框
-                                                                       folderName = "" // 清空输入框
-                                                                       showBottomSheet = false
-                                                                       snackbarHostState.showSnackbar("Folder created successfully")
-                                                                   }
+                                                                    coroutineScope.launch {
+                                                                        loadItems(currentFolderId)
+                                                                        showDialog = false // 关闭对话框
+                                                                        folderName = "" // 清空输入框
+                                                                        showBottomSheet = false
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "Folder created successfully"
+                                                                        )
+                                                                    }
                                                                 },
                                                                 onError = {
-                                                                   coroutineScope.launch {
-                                                                       loadItems(currentFolderId)
-                                                                       showDialog = false // 关闭对话框
-                                                                       folderName = "" // 清空输入框
-                                                                       showBottomSheet = false
-                                                                       snackbarHostState.showSnackbar("Error: $it")
-                                                                   }
+                                                                    coroutineScope.launch {
+                                                                        loadItems(currentFolderId)
+                                                                        showDialog = false // 关闭对话框
+                                                                        folderName = "" // 清空输入框
+                                                                        showBottomSheet = false
+                                                                        snackbarHostState.showSnackbar(
+                                                                            "Error: $it"
+                                                                        )
+                                                                    }
                                                                 }
                                                             )
                                                         } catch (e: Exception) {
@@ -1259,13 +1570,15 @@ fun TrashScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(
-                    text = "Download Queue",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    ),
-                ) },
+                title = {
+                    Text(
+                        text = "Download Queue",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        ),
+                    )
+                },
                 navigationIcon = {},
             )
         },
@@ -1276,14 +1589,14 @@ fun TrashScreen() {
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-               LazyColumn(
-                   modifier = Modifier.fillMaxSize()
-               ) {
-                   items(downloadQueue){downloadItem ->
-                       DownloadQueueItem(downloadItem = downloadItem)
-                       Spacer(modifier = Modifier.height(16.dp))
-                   }
-               }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(downloadQueue) { downloadItem ->
+                        DownloadQueueItem(downloadItem = downloadItem)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
             }
         }
     )
