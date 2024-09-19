@@ -11,6 +11,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.HttpException
 import retrofit2.Response
 
 suspend fun createFolder(
@@ -109,4 +110,69 @@ private fun getFileName(context: Context, uri: Uri): String {
     }
 
     return fileName ?: "uploaded_image" // 如果无法获取文件名，返回默认名称
+}
+
+// 删除文件
+suspend fun deleteDriveItem(
+    context: Context,
+    itemId: String,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+){
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("OAuthPrefs", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getString("userId", null)
+    val token = sharedPreferences.getString("token", null)
+
+    if (userId != null && token != null) {
+        val apiService = FileRetrofitClient.instance
+        try {
+            val response = apiService.deleteDriveItem(
+                userId = userId,
+                itemId = itemId,
+                authorization = "Bearer $token"
+            )
+            if (response.isSuccessful){
+                onSuccess()
+            }else{
+                onError("Error: ${response.code()}")
+            }
+        }catch (e: Exception){
+            onError("Error: ${e.message}")
+        }
+    }else{
+        onError("No credentials found")
+    }
+}
+
+// 创建共享链接
+suspend fun createShareableLink(
+    context: Context,
+    itemId: String,
+    linkType: String, // "view", "edit", or "embed"
+    scope : String? = null, // "anonymous" or "organization"
+    onSuccess: (String) -> Unit,
+    onError: (String) -> Unit
+) {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("OAuthPrefs", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getString("userId", null)
+    val token = sharedPreferences.getString("token", null)
+    if (userId != null && token != null) {
+        val apiService = FileRetrofitClient.instance
+        val createLinkRequest = CreateLinkRequest(type = linkType, scope = scope)
+
+        try {
+            val response = apiService.createShareableLink(
+                userId = userId,
+                itemId = itemId,
+                authorization = "Bearer $token",
+                requestBody = createLinkRequest
+            )
+            onSuccess(response.link.webUrl) // 返回共享链接
+        }catch (e: HttpException) {
+            onError("Http Error: ${e.message}")
+        }catch (e: Exception) {
+            onError("Error: ${e.message}")
+        }
+    }else
+        onError("No credentials found")
 }
