@@ -1,6 +1,5 @@
-package com.lurenjia534.nextonedrive.Filefunction
+package com.lurenjia534.nextonedrive.ui.dialogs
 
-import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height

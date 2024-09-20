@@ -1,4 +1,4 @@
-package com.lurenjia534.nextonedrive.Filefunction
+package com.lurenjia534.nextonedrive.ui.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
