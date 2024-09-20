@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun SettingItem(icon: ImageVector, title: String, subtitle: String? = null) {
+fun ProfileItem(icon: ImageVector, title: String, subtitle: String? = null) {
     Card(
         modifier = Modifier
             .fillMaxWidth()

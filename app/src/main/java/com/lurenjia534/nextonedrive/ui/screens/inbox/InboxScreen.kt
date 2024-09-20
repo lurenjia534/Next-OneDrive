@@ -62,7 +62,7 @@ fun InboxScreen(navController: NavController) {
         ) {
             Column(
                 modifier = Modifier
-                    .align(Alignment.Center)
+                    .align(Alignment.TopStart)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally

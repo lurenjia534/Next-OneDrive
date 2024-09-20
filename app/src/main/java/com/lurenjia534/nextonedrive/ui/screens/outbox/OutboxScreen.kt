@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lurenjia534.nextonedrive.Profilepage.fetchDriveInfo
 import com.lurenjia534.nextonedrive.ui.components.SectionTitle
-import com.lurenjia534.nextonedrive.ui.components.SettingItem
+import com.lurenjia534.nextonedrive.ui.components.ProfileItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,35 +89,35 @@ fun OutboxScreen() {
                         SectionTitle(title = "OneDrive 信息")
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Home,
                             title = "名称",
                             subtitle = driveInfo?.name ?: "N/A"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Build,
                             title = "驱动器类型",
                             subtitle = driveInfo?.driveType ?: "N/A"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.AccountCircle,
                             title = "创建者",
                             subtitle = driveInfo?.createdBy?.user?.displayName ?: "N/A"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Face,
                             title = "最后修改者",
                             subtitle = driveInfo?.lastModifiedBy?.user?.displayName ?: "N/A"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Email,
                             title = "邮箱",
                             subtitle = driveInfo?.owner?.user?.email ?: "N/A"
@@ -129,28 +129,28 @@ fun OutboxScreen() {
                         SectionTitle(title = "存储信息")
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Delete,
                             title = "已删除存储",
                             subtitle = "${driveInfo?.quota?.deleted?.div(1024 * 1024)} MB"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Edit,
                             title = "剩余存储",
                             subtitle = "${driveInfo?.quota?.remaining?.div(1024L * 1024 * 1024 * 1024)} TB"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.Info,
                             title = "总存储空间",
                             subtitle = "${driveInfo?.quota?.total?.div(1024L * 1024 * 1024 * 1024)} TB"
                         )
                     }
                     item {
-                        SettingItem(
+                        ProfileItem(
                             icon = Icons.Outlined.CheckCircle,
                             title = "已用存储空间",
                             subtitle = "${driveInfo?.quota?.used?.div(1024L * 1024 * 1024)} GB"
