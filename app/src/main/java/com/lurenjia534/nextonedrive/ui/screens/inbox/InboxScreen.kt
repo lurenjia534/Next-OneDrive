@@ -31,7 +31,7 @@ import com.lurenjia534.nextonedrive.OAuthToken.fetchAccessToken
 fun InboxScreen(navController: NavController) {
     // 将原来的 InboxScreen 的内容移动到这里
     // 例如登录表单等
-    // 你可能还需要移动辅助 Composable，如 InputField
+    // 可能还需要移动辅助 Composable，如 InputField
 
     // 状态变量
     var tenantId by remember { mutableStateOf("") }
